@@ -43,3 +43,11 @@ app-example
 # generated native folders
 /ios
 /android
+
+node_modules
+.env
+backend/node_modules
+backend/dev.db
+dist
+web-build
+.expo

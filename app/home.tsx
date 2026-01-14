@@ -1,6 +1,7 @@
 import { MaterialCommunityIcons } from "@expo/vector-icons";
+import { useFocusEffect } from "@react-navigation/native";
 import { useRouter } from "expo-router";
-import React, { useEffect, useRef, useState } from "react";
+import React, { useCallback, useEffect, useRef, useState } from "react";
 import {
   Animated,
   Dimensions,
@@ -43,6 +44,24 @@ export default function HomeScreen() {
 
     loadUser();
   }, [router]);
+
+  useFocusEffect(
+    useCallback(() => {
+      let active = true;
+      (async () => {
+        const storedUser = await getUser();
+        if (!storedUser) {
+          router.replace("/login");
+          return;
+        }
+        if (active) setUser(storedUser);
+      })();
+
+      return () => {
+        active = false;
+      };
+    }, [router])
+  );
 
   useEffect(() => {
     if (user?.transactions) {

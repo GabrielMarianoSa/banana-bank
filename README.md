@@ -1,50 +1,206 @@
-# Welcome to your Expo app 👋
+# Banana Bank 🍌
 
-This is an [Expo](https://expo.dev) project created with [`create-expo-app`](https://www.npmjs.com/package/create-expo-app).
+Aplicativo bancário fictício desenvolvido como projeto de estudo, com frontend em React Native (Expo) e backend em Node.js.
 
-## Get started
+O objetivo é simular fluxos comuns de um app financeiro, como login, visualização de saldo e criação/confirmação de pagamentos, utilizando uma API simples e banco de dados local.
 
-1. Install dependencies
+---
 
-   ```bash
-   npm install
-   ```
+## Visão geral
 
-2. Start the app
+O Banana Bank é um app mobile e web que permite ao usuário:
 
-   ```bash
-   npx expo start
-   ```
+- Fazer login (modo demonstração)
+- Visualizar saldo
+- Realizar operações como pagamentos/transferências
+- Consultar transações
 
-In the output, you'll find options to open the app in a
+O projeto foi pensado para praticar a comunicação entre frontend e backend, persistência de dados e organização básica de um sistema full-stack.
 
-- [development build](https://docs.expo.dev/develop/development-builds/introduction/)
-- [Android emulator](https://docs.expo.dev/workflow/android-studio-emulator/)
-- [iOS simulator](https://docs.expo.dev/workflow/ios-simulator/)
-- [Expo Go](https://expo.dev/go), a limited sandbox for trying out app development with Expo
+---
 
-You can start developing by editing the files inside the **app** directory. This project uses [file-based routing](https://docs.expo.dev/router/introduction).
+## Funcionalidades
 
-## Get a fresh project
+- Login em modo demo (credenciais de teste)
+- Armazenamento local do usuário (AsyncStorage)
+- Visualização de saldo
+- Criação de pagamentos via API
+- Confirmação de pagamentos (paid / failed)
+- Histórico de transações (local e/ou backend)
+- Modo “demo” automático quando o backend não está disponível
+- Versão mobile (Android/iOS) e web
 
-When you're ready, run:
+---
 
-```bash
-npm run reset-project
+## Tecnologias
+
+### Frontend
+
+- Expo
+- React Native
+- TypeScript
+- Expo Router / React Navigation
+- AsyncStorage
+
+### Backend
+
+- Node.js
+- Express
+- TypeScript
+
+### Banco de dados
+
+- Prisma ORM
+- SQLite (ambiente de desenvolvimento)
+
+---
+
+## Arquitetura
+
+O projeto é dividido em duas partes principais:
+
+/app → frontend (mobile + web)
+/backend → API REST
+
+markdown
+Copy code
+
+No frontend:
+
+- `app/` → telas (login, splash, home, transferir, etc.)
+- `components/` → componentes reutilizáveis
+- `services/` → comunicação com API, fake API e armazenamento local
+
+No backend:
+
+- `index.ts` → inicialização do servidor
+- `payments.ts` → rotas de pagamentos
+- `prisma/schema.prisma` → modelos do banco
+
+---
+
+## Fluxos principais
+
+### Splash
+
+Tela inicial com animação simples e redirecionamento automático para login.
+
+### Login
+
+- Usuário informa email e senha
+- Validação feita via `fakeLogin`
+- Usuário é salvo localmente
+- Redirecionamento para a tela principal
+
+Credenciais de teste:
+
+email: teste@banana.com
+senha: 123456
+
+yaml
+Copy code
+
+### Pagamentos
+
+- App envia requisição para a API (`POST /payments`)
+- Backend valida os dados e cria o pagamento com status `pending`
+- Pagamento pode ser confirmado como `paid` ou `failed`
+- Transações são exibidas no app
+
+### Modo demo
+
+Quando o backend não está disponível, o app funciona em modo demonstração, salvando os dados localmente.
+
+---
+
+## API (endpoints)
+
+### Criar pagamento
+
+POST /payments
+
+css
+Copy code
+
+Body:
+
+```json
+{
+  "amount": 100,
+  "method": "PIX"
+}
+Buscar pagamento
+bash
+Copy code
+GET /payments/:id
+Confirmar pagamento
+bash
+Copy code
+POST /payments/:id/confirm
+Body:
+
+json
+Copy code
+{
+  "status": "paid"
+}
+Como rodar o projeto
+Backend
+bash
+Copy code
+cd backend
+npm install
+npx prisma generate
+npx prisma migrate dev --name init
+npm run dev
+A API ficará disponível em:
+
+arduino
+Copy code
+http://localhost:4000
+Frontend (mobile / web)
+bash
+Copy code
+npm install
+npx expo start
+Se o Expo Go não conectar via LAN:
+
+bash
+Copy code
+npx expo start --tunnel
+Configuração da URL do backend
+O app usa a variável:
+
+nginx
+Copy code
+EXPO_PUBLIC_API_URL
+Casos comuns:
+
+Web / iOS simulator:
+
+
+Copy code
+http://localhost:4000
+Android emulator:
+
+
+Copy code
+http://10.0.2.2:4000
+Celular físico:
+Use o IP da sua máquina na rede local, por exemplo:
+
+
+Copy code
+http://192.168.0.10:4000
+Crie um arquivo .env baseado em .env.example.
+
+Após alterar:
+
+bash
+Copy code
+npx expo start -c
+
+Aviso
+Este projeto é educacional e não foi desenvolvido para uso em produção ou para manipular dados reais.
+
 ```
-
-This command will move the starter code to the **app-example** directory and create a blank **app** directory where you can start developing.
-
-## Learn more
-
-To learn more about developing your project with Expo, look at the following resources:
-
-- [Expo documentation](https://docs.expo.dev/): Learn fundamentals, or go into advanced topics with our [guides](https://docs.expo.dev/guides).
-- [Learn Expo tutorial](https://docs.expo.dev/tutorial/introduction/): Follow a step-by-step tutorial where you'll create a project that runs on Android, iOS, and the web.
-
-## Join the community
-
-Join our community of developers creating universal apps.
-
-- [Expo on GitHub](https://github.com/expo/expo): View our open source platform and contribute.
-- [Discord community](https://chat.expo.dev): Chat with Expo users and ask questions.

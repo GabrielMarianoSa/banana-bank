@@ -1,0 +1,20 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = "file:./dev.db"
+}
+
+model Payment {
+  id        Int      @id @default(autoincrement())
+  amount    Int
+  method    String
+  status    String
+  /// `metadata` stored as JSON string because SQLite connector
+  /// may not support the `Json` native type in some environments.
+  metadata  String?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}

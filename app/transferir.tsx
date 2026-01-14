@@ -2,12 +2,14 @@ import { useRouter } from "expo-router";
 import React, { useState } from "react";
 import {
   ActivityIndicator,
+  Modal,
   StyleSheet,
   Text,
   TextInput,
   TouchableOpacity,
   View,
 } from "react-native";
+import { debitAndRecordTransaction } from "../services/storage";
 import { Colors } from "../theme/colors";
 
 export default function TransferirScreen() {
@@ -16,16 +18,65 @@ export default function TransferirScreen() {
   const [account, setAccount] = useState("");
   const [amount, setAmount] = useState("");
   const [loading, setLoading] = useState(false);
-  const [success, setSuccess] = useState(false);
+  const [modalVisible, setModalVisible] = useState(false);
+  const [modalTitle, setModalTitle] = useState("");
+  const [modalSub, setModalSub] = useState("");
+
+  function parseAmount(raw: string) {
+    const normalized = (raw || "").trim().replace(/\./g, "").replace(/,/g, ".");
+    const value = Number.parseFloat(normalized);
+    if (!Number.isFinite(value) || value <= 0) return null;
+    return value;
+  }
 
   function handleTransfer() {
     setLoading(true);
-    setSuccess(false);
 
-    setTimeout(() => {
+    const parsed = parseAmount(amount);
+    if (!parsed) {
       setLoading(false);
-      setSuccess(true);
-    }, 1500);
+      setModalTitle("Ops");
+      setModalSub("Informe um valor válido");
+      setModalVisible(true);
+      return;
+    }
+
+    setTimeout(async () => {
+      try {
+        const titleParts = [
+          "Transferência",
+          bank?.trim(),
+          account?.trim(),
+        ].filter((p) => !!p);
+        const title =
+          titleParts.length > 1 ? titleParts.join(" — ") : "Transferência";
+
+        const result = await debitAndRecordTransaction({
+          title,
+          debitAmount: parsed,
+        });
+
+        setLoading(false);
+        if (!result.ok) {
+          if (result.reason === "NO_USER") router.replace("/login");
+          else {
+            setModalTitle("Ops");
+            setModalSub(result.message);
+            setModalVisible(true);
+          }
+          return;
+        }
+
+        setModalTitle("Transferência realizada");
+        setModalSub("Transferência realizada com sucesso");
+        setModalVisible(true);
+      } catch {
+        setLoading(false);
+        setModalTitle("Ops");
+        setModalSub("Erro ao transferir");
+        setModalVisible(true);
+      }
+    }, 900);
   }
 
   return (
@@ -71,11 +122,23 @@ export default function TransferirScreen() {
           )}
         </TouchableOpacity>
 
-        {success && (
-          <Text style={styles.success}>
-            Transferência realizada com sucesso
-          </Text>
-        )}
+        <Modal visible={modalVisible} animationType="slide" transparent={true}>
+          <View style={styles.successOverlay}>
+            <View style={styles.successCard}>
+              <Text style={styles.successTitle}>{modalTitle}</Text>
+              <Text style={styles.successSub}>{modalSub}</Text>
+              <TouchableOpacity
+                style={styles.successButton}
+                onPress={() => {
+                  setModalVisible(false);
+                  router.replace("/home");
+                }}
+              >
+                <Text style={styles.buttonText}>Entendi!</Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+        </Modal>
       </View>
     </View>
   );
@@ -139,5 +202,42 @@ const styles = StyleSheet.create({
     color: Colors.success,
     textAlign: "center",
     fontWeight: "600",
+  },
+  error: {
+    marginTop: 16,
+    color: Colors.danger,
+    textAlign: "center",
+    fontWeight: "600",
+  },
+  successOverlay: {
+    flex: 1,
+    backgroundColor: "rgba(0,0,0,0.5)",
+    justifyContent: "center",
+    alignItems: "center",
+  },
+  successCard: {
+    width: "84%",
+    backgroundColor: Colors.card,
+    padding: 20,
+    borderRadius: 14,
+    alignItems: "center",
+    elevation: 6,
+  },
+  successTitle: {
+    fontSize: 20,
+    fontWeight: "700",
+    color: Colors.textPrimary,
+  },
+  successSub: {
+    marginTop: 8,
+    color: Colors.textSecondary,
+    textAlign: "center",
+  },
+  successButton: {
+    marginTop: 16,
+    backgroundColor: Colors.primary,
+    paddingHorizontal: 20,
+    paddingVertical: 10,
+    borderRadius: 10,
   },
 });

@@ -11,7 +11,7 @@ import {
   View,
 } from "react-native";
 
-import { getUser, saveUser } from "../services/storage";
+import { debitAndRecordTransaction } from "../services/storage";
 import { Colors } from "../theme/colors";
 
 export default function PixScreen() {
@@ -21,10 +21,14 @@ export default function PixScreen() {
   const [loading, setLoading] = useState(false);
   const [success, setSuccess] = useState(false);
   const scaleAnim = useRef(new Animated.Value(0)).current;
+  const [modalVisible, setModalVisible] = useState(false);
+  const [modalTitle, setModalTitle] = useState("");
+  const [modalSub, setModalSub] = useState("");
 
   async function handleSend() {
     setLoading(true);
     setSuccess(false);
+    setModalVisible(false);
 
     // parse amount (allow comma or dot)
     const parsed = parseFloat(
@@ -32,37 +36,43 @@ export default function PixScreen() {
     );
     if (isNaN(parsed) || parsed <= 0) {
       setLoading(false);
+      setModalTitle("Ops");
+      setModalSub("Informe um valor válido");
+      setModalVisible(true);
       return;
     }
 
     setTimeout(async () => {
       try {
-        const user = await getUser();
-        if (!user) {
+        const result = await debitAndRecordTransaction({
+          title: `Pix — ${key || "transferência"}`,
+          debitAmount: Math.abs(parsed),
+        });
+
+        if (!result.ok) {
           setLoading(false);
-          router.replace("/login");
+          if (result.reason === "NO_USER") {
+            router.replace("/login");
+            return;
+          }
+          setSuccess(false);
+          setModalTitle("Ops");
+          setModalSub(result.message);
+          setModalVisible(true);
           return;
         }
 
-        const tx = {
-          id: String(Date.now()),
-          title: `Pix — ${key || "transferência"}`,
-          amount: -Math.abs(parsed),
-          date: new Date().toISOString(),
-        };
-
-        const updated = {
-          ...user,
-          balance: Math.max(0, (user.balance || 0) - Math.abs(parsed)),
-          transactions: [tx].concat(user.transactions || []),
-        };
-
-        await saveUser(updated);
         setLoading(false);
         setSuccess(true);
+        setModalTitle("Transferência realizada");
+        setModalSub("Seu Pix foi enviado com sucesso.");
+        setModalVisible(true);
       } catch (err) {
         console.warn(err);
         setLoading(false);
+        setModalTitle("Ops");
+        setModalSub("Erro ao enviar Pix");
+        setModalVisible(true);
       }
     }, 800);
   }
@@ -123,21 +133,20 @@ export default function PixScreen() {
           )}
         </TouchableOpacity>
 
-        <Modal visible={success} animationType="slide" transparent={true}>
+        <Modal visible={modalVisible} animationType="slide" transparent={true}>
           <View style={styles.successOverlay}>
             <Animated.View
               style={[
                 styles.successCard,
-                { transform: [{ scale: scaleAnim }] },
+                { transform: [{ scale: success ? scaleAnim : 1 }] },
               ]}
             >
-              <Text style={styles.successTitle}>Transferência realizada</Text>
-              <Text style={styles.successSub}>
-                Seu Pix foi enviado com sucesso.
-              </Text>
+              <Text style={styles.successTitle}>{modalTitle}</Text>
+              <Text style={styles.successSub}>{modalSub}</Text>
               <TouchableOpacity
                 style={styles.successButton}
                 onPress={() => {
+                  setModalVisible(false);
                   setSuccess(false);
                   router.replace("/home");
                 }}
@@ -208,6 +217,12 @@ const styles = StyleSheet.create({
   success: {
     marginTop: 16,
     color: Colors.success,
+    textAlign: "center",
+    fontWeight: "600",
+  },
+  error: {
+    marginTop: 16,
+    color: Colors.danger,
     textAlign: "center",
     fontWeight: "600",
   },
